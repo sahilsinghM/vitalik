@@ -13,7 +13,7 @@ All notable changes to this project. Format follows Keep a Changelog; dates are 
 - `cycle_status` table: per poll and exchange, markets answering vs expected (distinguishes outage
   from an empty market).
 - `docs/`: approved design for the paper-trading engine, test plan, deferred TODOs.
-- `CLAUDE.md`, `CHANGELOG.md`, `.gitignore`.
+- Root `README.md` (overview and quick start), `CLAUDE.md`, `CHANGELOG.md`, `.gitignore`.
 
 ### Changed
 - `config.yaml`: ZebPay taker fee 0.5% to 0.45% and USDT withdrawal override 8 (verified against
