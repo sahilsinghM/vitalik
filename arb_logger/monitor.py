@@ -335,7 +335,7 @@ tick();setInterval(tick,5000);
 </script></body></html>"""
 
 
-def make_handler(cfg, db_path):
+def make_handler(cfg, db_path, hosts):
     class H(BaseHTTPRequestHandler):
         def log_message(self, *a):
             pass
@@ -349,6 +349,9 @@ def make_handler(cfg, db_path):
             self.wfile.write(body)
 
         def do_GET(self):
+            # Reject unexpected Host headers: stops DNS-rebinding pages from reading this server via the browser
+            if self.headers.get("Host", "").rsplit(":", 1)[0].strip("[]") not in hosts:
+                return self.send(403, "text/plain", b"forbidden host")
             u = urlparse(self.path)
             if u.path == "/":
                 return self.send(200, "text/html; charset=utf-8", PAGE.encode())
@@ -381,7 +384,7 @@ def main():
     with open(a.config) as f:
         cfg = yaml.safe_load(f)
     db_path = a.db or cfg["db_path"]
-    server = ThreadingHTTPServer((a.host, a.port), make_handler(cfg, db_path))
+    server = ThreadingHTTPServer((a.host, a.port), make_handler(cfg, db_path, {"127.0.0.1", "localhost", "::1", a.host}))
     print(f"monitor on http://{a.host}:{a.port}  (db: {db_path})")
     try:
         server.serve_forever()

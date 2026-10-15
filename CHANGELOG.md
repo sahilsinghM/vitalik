@@ -20,6 +20,10 @@ All notable changes to this project. Format follows Keep a Changelog; dates are 
   zebpay.com/in/fees); Binance taker 0.1% confirmed. Verification notes added.
 - README rewritten: monitor, new flags, verified-fee table, first findings.
 
+### Security
+- `monitor.py` rejects requests whose `Host` header is not localhost/127.0.0.1 (or the configured
+  `--host`), closing a DNS-rebinding path where a web page could read the dashboard via the browser.
+
 ### Verified
 - Live logging works on 8 of 9 configured exchanges (OKX unreachable from this machine); ~27 minutes /
   163 polls collected. No route profitable with default costs; best gaps 0 to 15 bps vs 45 to 75 bps
