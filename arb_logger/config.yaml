@@ -1,0 +1,94 @@
+# ─────────────────────────────────────────────────────────────
+# Spread logger config. Everything marked VERIFY is a best-effort
+# default — check it against the exchange's fee page before trusting
+# the P&L numbers.
+# ─────────────────────────────────────────────────────────────
+
+capital_inr: 1000000            # paper capital: ₹10 lakh
+trade_sizes_inr: [50000, 200000, 500000]   # per-leg notional to test
+poll_interval_sec: 10
+db_path: data/spreads.sqlite
+
+# Assets to watch. Each is looked up as BASE/USDT on global exchanges
+# and BASE/INR (+ BASE/USDT if listed) on Indian exchanges.
+# Not included: FIGR_HELOC (trades almost only on Figure Markets —
+# no public order book on these exchanges), CoinGecko (not a token).
+# USDT itself is tracked as USDT/INR on Indian exchanges (also the FX rate).
+assets: [BTC, ETH, BNB, XRP, SOL, TRX, ZEC, USDC]
+
+# ── India tax & levies ────────────────────────────────────────
+tax:
+  income_tax_rate: 0.30         # Sec 115BBH flat rate on VDA gains
+  cess: 0.04                    # health & education cess on the tax
+  surcharge: 0.0                # set if your total income attracts surcharge
+  tds_rate: 0.01                # Sec 194S, on every VDA transfer (incl. crypto-to-crypto)
+  gst_on_fees: 0.18             # GST on exchange trading/withdrawal fees
+  # Losses are NOT set off against gains, and fees are NOT deductible —
+  # the engine taxes each profitable trade's gross gain on its own.
+
+# ── Fallbacks ─────────────────────────────────────────────────
+fx:
+  usdtinr_fallback: 90.0        # used only if no Indian exchange quote is available. VERIFY
+  # Converting between USDT and INR is itself a trade on an Indian exchange:
+  fx_leg_taker_fee: 0.005       # VERIFY
+
+# ── Blockchain transfer model (minutes until funds are usable) ──
+# network confirmation time the receiving exchange typically requires.
+# Withdrawal processing on the sending side is added per exchange below.
+transfer_minutes:
+  BTC: 30
+  ETH: 5
+  BNB: 2      # BNB Smart Chain
+  XRP: 1
+  SOL: 1
+  TRX: 2
+  ZEC: 30
+  USDC: 3
+  USDT: 3     # TRC20
+
+# default withdrawal fee in units of the coin (cheapest common network). VERIFY
+withdraw_fee:
+  BTC: 0.0002
+  ETH: 0.0015
+  BNB: 0.0005
+  XRP: 0.25
+  SOL: 0.01
+  TRX: 1.5
+  ZEC: 0.005
+  USDC: 1.0
+  USDT: 1.0
+
+# ── Paper-trading assumptions ─────────────────────────────────
+analysis:
+  rebalance_every_n_trades: 1   # pre-funded mode: how often inventory is moved back (1 = every trade, conservative)
+  execution_lag_cycles: 1       # you see a gap at cycle t, your orders fill at t+lag prices
+  max_book_skew_ms: 2000        # ignore pairs whose two books were fetched too far apart
+  min_net_profit_inr: 1         # a route counts as a trade only if expected net > this
+
+# ── Exchanges ─────────────────────────────────────────────────
+# indian: true  → INR markets, TDS deducted by the exchange, bank-rail INR
+# taker_fee: null → use ccxt's published default for that market
+# withdraw_processing_min: how long the exchange takes to release a withdrawal
+exchanges:
+  binance:  {enabled: true,  indian: false, taker_fee: 0.001,  gst: true, tds: true, withdraw_processing_min: 2,  ob_limit: 20}
+  okx:      {enabled: true,  indian: false, taker_fee: 0.001,  gst: true, tds: true, withdraw_processing_min: 2,  ob_limit: 20}
+  bybit:    {enabled: true,  indian: false, taker_fee: 0.001,  gst: true, tds: true, withdraw_processing_min: 2,  ob_limit: 50}
+  kucoin:   {enabled: true,  indian: false, taker_fee: 0.001,  gst: true, tds: true, withdraw_processing_min: 3,  ob_limit: 20}
+  bitget:   {enabled: true,  indian: false, taker_fee: 0.001,  gst: true, tds: true, withdraw_processing_min: 3,  ob_limit: 50}
+  gate:     {enabled: true,  indian: false, taker_fee: 0.002,  gst: true, tds: true, withdraw_processing_min: 3,  ob_limit: 20}
+  kraken:   {enabled: true,  indian: false, taker_fee: 0.004,  gst: true, tds: true, withdraw_processing_min: 5,  ob_limit: 25}
+  coinbase: {enabled: false, indian: false, taker_fee: 0.006,  gst: true, tds: true, withdraw_processing_min: 5,  ob_limit: null}
+  coindcx:  {enabled: true,  indian: true,  taker_fee: 0.005,  gst: true, tds: true, withdraw_processing_min: 30, ob_limit: null}
+  zebpay:   {enabled: true,  indian: true,  taker_fee: 0.0045,  gst: true, tds: true, withdraw_processing_min: 30, ob_limit: null}
+
+# per-exchange withdrawal fee overrides, e.g.
+# withdraw_fee_overrides:
+#   coindcx: {BTC: 0.0006, USDT: 5}
+# Verified 2026-10-15 against official pages:
+#   binance spot taker 0.100% (binance.com/en/fee/schedule, Regular user)  -> config 0.001 OK
+#   zebpay spot taker 0.45% Regular tier, <=5 lakh/30d (zebpay.com/in/fees, effective 12 Oct 2024) -> 0.0045
+#   zebpay USDT withdrawal: TRC-20 = 8, ERC-20 = 3 (units not stated on page; assumed USDT)
+# NOT verified (403 on official page, search results conflicted): coindcx taker (0.5% kept, VERIFY),
+#   all other exchanges, transfer_minutes, fx_leg_taker_fee.
+withdraw_fee_overrides:
+  zebpay: {USDT: 8}

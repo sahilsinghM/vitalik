@@ -1,0 +1,5 @@
+- Lot-based (FIFO/avg-cost) tax model for pre-funded inventory (v2)
+- Financial-year TDS credit/refund logic (v2)
+- Telegram/email daily report and per-trade autopsy
+- Replay speed-ups (10x/100x)
+- Historical public kline backtest for longer horizons
